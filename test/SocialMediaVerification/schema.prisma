@@ -1,0 +1,708 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_VT")
+}
+
+enum SignUpMethod {
+  GOOGLE
+  PHONE
+}
+
+model Subscriber {
+  id                    String             @id @unique @default(cuid())
+  companyName           String             @unique
+  subscriptionKey       String             @unique
+  subscriptionValidDate BigInt
+  enabled               Boolean            @default(true)
+  createdOn             DateTime
+  updatedOn             DateTime
+  createdBy             String
+  updateBy              String
+  email                 String?
+  phone                 String?
+  apiRate               NewsApiRateLimit[]
+}
+
+model NewsApiRateLimit {
+  id                   String       @id @unique @default(cuid())
+  subscriberId         String
+  apiIdentifier        String
+  apiLimitPerHour      Int
+  resetIntevalInSecond Int
+  response             NewsApiLog[]
+  subscriber           Subscriber   @relation(fields: [subscriberId], references: [id])
+
+  @@unique([subscriberId, apiIdentifier], name: "subscriberId_apiIdentifier")
+}
+
+model NewsApiLog {
+  id        String           @id @unique @default(cuid())
+  apiRateId String
+  apiName   String
+  createdAt DateTime         @default(now())
+  apiRate   NewsApiRateLimit @relation(fields: [apiRateId], references: [id])
+}
+
+model BannedUser {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String
+  name      String
+  avater    String?
+  email     String
+  airdropId String?  @db.Uuid
+  Airdrop   Airdrop? @relation(fields: [airdropId], references: [id])
+}
+
+model User {
+  id                      String                 @id @unique @default(cuid())
+  email                   String?                 @unique
+  name                    String?
+  avatar                  String?
+  instagramUrl            String?
+  twitterUrl              String?
+  facebookUrl             String?
+  linkedinUrl             String?
+  metamaskAddress         String?
+  discordUrl              String?
+  totalXp                 BigInt?
+  typeofInvestor          String?
+  goalOfInvestor          String?
+  userCharacter           String?
+  userDevice              String?
+  lastSignedAt            String?
+  location                String?
+  portfolio               String[]
+  referralCode            String?
+  referredBy              String?
+  sessionToken            String?
+  howToCrypto             String?
+  familarWithCrypto       String?
+  motivationForCrypto     String?
+  notificationPreferences NotificationTypes[]
+  createdAt               DateTime               @default(now())
+  phoneNumber             String?                @unique
+  phoneVerified           Boolean                @default(false)
+  signUpMethod            SignUpMethod
+
+  otpVerifications        OtpVerification[]
+  magicLinks              MagicLink[]
+  Article                 Article[]
+  bookmarkArticles        BookmarkedArticles[]
+  courseProgress          CourseProgress[]
+  dislikedArticles        DislikedArticles[]
+  likedArticles           LikedArticles[]
+  participatedAirdrops    ParticipatedAirdrops[]
+  ratings                 Rating[]
+  ratingsLMS              RatingLMS[]
+  socialProfile           SocialProfile[]
+  streak                  Streak[]
+
+  @@index([phoneNumber, email], name: "user_contact_index")
+}
+
+model OtpVerification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  otp         String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  isUsed      Boolean  @default(false)
+
+  @@index([userId, otp], name: "otp_verification_index")
+}
+
+model MagicLink {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  code        String   @unique
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  isUsed      Boolean  @default(false)
+
+  @@index([userId, code], name: "magic_link_index")
+}
+
+model ParticipatedAirdrops {
+  id            String @id @default(uuid())
+  airdropId     String
+  name          String
+  description   String
+  images        String
+  leaderboardId String
+  userId        String
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LikedArticles {
+  id          String  @id @default(uuid())
+  userId      String
+  title       String?
+  image       String?
+  publishedAt String?
+  articleId   String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId], name: "userId_articleId")
+}
+
+model DislikedArticles {
+  id          String  @id @default(uuid())
+  userId      String
+  title       String?
+  image       String?
+  publishedAt String?
+  articleId   String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId], name: "userId_articleId")
+}
+
+model BookmarkedArticles {
+  id          String  @id @default(uuid())
+  userId      String
+  title       String?
+  image       String?
+  publishedAt String?
+  articleId   String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId], name: "userId_articleId")
+}
+
+model Admin {
+  id                      String              @id @unique
+  email                   String              @unique
+  name                    String
+  companyName             String?
+  websiteUrl              String?
+  sessionToken            String?
+  instagram               String?
+  twitter                 String?
+  facebook                String?
+  linkedIn                String?
+  discord                 String?
+  telegram                String?
+  airdropWhitepaper       String[]
+  whitepaperSummary       String?
+  notificationPreferences NotificationTypes[]
+  createdAirdrops         Airdrop[]
+}
+
+model CourseProgress {
+  id                String            @id @default(uuid())
+  userId            String
+  courseId          String
+  userCourseScore   Int?              @default(0)
+  isCourseCompleted Boolean           @default(false)
+  isCourseLocked    Boolean           @default(true)
+  isCourseStarted   Boolean           @default(false)
+  chapters          ChapterProgress[]
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId], name: "userId_courseId")
+}
+
+model ChapterProgress {
+  id                 String         @id @default(uuid())
+  courseProgressId   String
+  chapterId          String
+  userChapterScore   Int?           @default(0)
+  isChapterCompleted Boolean        @default(false)
+  isChapterLocked    Boolean        @default(true)
+  isQuizAttempted    Boolean        @default(false)
+  isQuizCompleted    Boolean        @default(false)
+  isChapterStarted   Boolean        @default(false)
+  courseProgress     CourseProgress @relation(fields: [courseProgressId], references: [id], onDelete: Cascade)
+  quizes             QuizResult[]
+
+  @@unique([courseProgressId, chapterId], name: "courseProgressId_chapterId")
+}
+
+model QuizResult {
+  id                String          @id @default(uuid())
+  chapterProgressId String
+  quizId            String
+  xpEarned          Int
+  chapterProgress   ChapterProgress @relation(fields: [chapterProgressId], references: [id], onDelete: Cascade)
+  quiz              LmsQuiz         @relation(fields: [quizId], references: [id])
+
+  @@unique([quizId, chapterProgressId], name: "quizId_chapterProgressId")
+}
+
+model Streak {
+  id          String @id @default(uuid())
+  userId      String
+  streak_date BigInt
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, streak_date], name: "userId_streakDate")
+}
+
+model LmsAdmin {
+  id            String   @id @unique
+  email         String   @unique
+  name          String?
+  instagram     String?
+  twitter       String?
+  facebook      String?
+  linkedIn      String?
+  discord       String?
+  telegram      String?
+  createdCourse Course[]
+}
+
+model Course {
+  id                    String              @id
+  courseName            String
+  courseShortHeading    String?
+  courseDescription     String?
+  courseBannerImage     String?
+  courseCreatorId       String?
+  coursePublishedStatus Boolean?            @default(false)
+  courseFreeTier        String?             @default("free")
+  courseCategory        String?
+  courseTags            String[]
+  createdBy             String?
+  courseComplexity      String              @default("medium")
+  isPublic              Boolean             @default(true)
+  courseNumber          Int?
+  courseChapters        Chapter[]
+  lmsAdmin              LmsAdmin?           @relation(fields: [createdBy], references: [id])
+  courseUserRegistered  RegisteredUserLms[]
+}
+
+model RegisteredUserLms {
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+}
+
+model Chapter {
+  id                 String              @id
+  chapterName        String?
+  chapterDescription String?
+  chapterAudio       String?
+  chapterSrt         String?
+  courseId           String?
+  readingTime        Int?                @default(0)
+  chapterNumber      Int?
+  chapterIcon        String?
+  isPublic           Boolean             @default(true)
+  chapterImage       String
+  chapterShareImage  String?
+  chapterSubHeader   String[]
+  course             Course?             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  chapterQuiz        LmsQuiz[]
+  ratings            RatingLMS[]
+  chapterSubSection  chapterSubSection[]
+
+  @@unique([courseId, chapterNumber])
+  @@index([chapterNumber])
+}
+
+model chapterSubSection {
+  id            String  @id @default(uuid())
+  chapterId     String
+  sectionNumber Int
+  text          String
+  beginTime     Int
+  chapter       Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, sectionNumber], name: "chapterId_sectionNumber")
+}
+
+model LmsQuiz {
+  id                 String       @id
+  quizName           String
+  quizScore          Int
+  quizType           String?
+  quizOptions        String[]
+  correctOptionIndex Int
+  chapterId          String?
+  chapter            Chapter?     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  QuizResult         QuizResult[]
+}
+
+model Airdrop {
+  id                     String           @id @default(uuid()) @db.Uuid
+  name                   String
+  description            String?
+  communitySize          BigInt?
+  category               String?
+  images                 String[]
+  videos                 String[]
+  wiki                   String?
+  created_at             DateTime         @default(now())
+  website                String?
+  airdropEntryQuizPoints Int?
+  creatorId              String
+  quizId                 String?          @db.Uuid
+  publishStatus          Boolean          @default(false)
+  Admin                  Admin            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  bannedUser             BannedUser[]
+  challenges             Challenges[]
+  airdropEntryQuiz       EntryLevelQuiz[]
+  inboxes                Inbox?
+  leaderboard            Leaderboard?
+  registeredUsers        RegisteredUser[]
+  reviews                Reviews[]
+  socialProfile          SocialProfile[]
+}
+
+model RegisteredUser {
+  id                   String         @id @default(uuid()) @db.Uuid
+  userId               String
+  name                 String
+  userEntrylevelPoints Int?           @default(0)
+  totalExp             BigInt?        @default(0)
+  userRank             BigInt?
+  airdropId            String?        @db.Uuid
+  leaderboardId        String?        @db.Uuid
+  airdrop              Airdrop?       @relation(fields: [airdropId], references: [id])
+  leaderboard          Leaderboard?   @relation(fields: [leaderboardId], references: [id])
+  userChallenges       TaskActivity[]
+}
+
+model TaskActivity {
+  id              String         @id @default(uuid()) @db.Uuid
+  taskId          String
+  taskName        String
+  taskDetails     String?
+  taskType        String
+  verified        Boolean?
+  taskExp         Int            @default(0)
+  xpClaimed       Boolean?       @default(false)
+  canClaim        Boolean?       @default(false)
+  registredUserId String         @db.Uuid
+  registredUser   RegisteredUser @relation(fields: [registredUserId], references: [id])
+}
+
+model EntryLevelQuiz {
+  id                 String   @id @default(uuid()) @db.Uuid
+  name               String
+  score              Int
+  correctoptionIndex Int
+  options            String[]
+  airdropId          String?  @db.Uuid
+  Airdrop            Airdrop? @relation(fields: [airdropId], references: [id], onDelete: Cascade)
+}
+
+model SocialProfile {
+  id         String         @id @default(uuid()) @db.Uuid
+  airdropId  String?        @db.Uuid
+  platform   SocialPlatform
+  profileUrl String
+  followers  BigInt?
+  userId     String?
+  Airdrop    Airdrop?       @relation(fields: [airdropId], references: [id], onDelete: Cascade)
+  User       User?          @relation(fields: [userId], references: [id])
+}
+
+model Challenges {
+  id            String  @id @default(uuid()) @db.Uuid
+  name          String
+  minXp         Int?
+  totalScore    BigInt?
+  description   String?
+  airdropId     String  @db.Uuid
+  publishStatus Boolean @default(false)
+  Airdrop       Airdrop @relation(fields: [airdropId], references: [id], onDelete: Cascade)
+  tasks         Task[]
+}
+
+model Reviews {
+  id        String  @id @default(uuid()) @db.Uuid
+  airdropId String  @db.Uuid
+  Airdrop   Airdrop @relation(fields: [airdropId], references: [id], onDelete: Cascade)
+}
+
+model Quiz {
+  id                 String   @id @default(uuid()) @db.Uuid
+  correctOptionIndex Int
+  options            String[]
+  taskId             String?  @unique @db.Uuid
+  Task               Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model FileUploadTask {
+  id           String  @id @default(uuid()) @db.Uuid
+  formatType   String?
+  maximumLimit Int?
+  taskId       String  @unique @db.Uuid
+  Task         Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id                 String  @id @default(uuid()) @db.Uuid
+  transactionAddress String
+  value              String?
+  taskId             String  @unique @db.Uuid
+  Task               Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Text {
+  id     String @id @default(uuid()) @db.Uuid
+  limit  Int?
+  taskId String @unique @db.Uuid
+  Task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Url {
+  id     String  @id @default(uuid()) @db.Uuid
+  url    String?
+  taskId String  @unique @db.Uuid
+  Task   Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id             String          @id @default(uuid()) @db.Uuid
+  type           QuestionType
+  description    String?
+  name           String
+  score          Int
+  publishStatus  Boolean         @default(false)
+  challengesId   String          @db.Uuid
+  fileUploadTask FileUploadTask?
+  quiz           Quiz?
+  challenges     Challenges      @relation(fields: [challengesId], references: [id], onDelete: Cascade)
+  text           Text?
+  transaction    Transaction?
+  url            Url?
+}
+
+model Leaderboard {
+  id                 String           @id @default(uuid()) @db.Uuid
+  airdropId          String           @unique @db.Uuid
+  Airdrop            Airdrop          @relation(fields: [airdropId], references: [id], onDelete: Cascade)
+  leaderboardEntries RegisteredUser[]
+}
+
+model Message {
+  id      String   @id @default(uuid()) @db.Uuid
+  text    String
+  time    DateTime @default(now())
+  inboxId String   @db.Uuid
+  Inbox   Inbox    @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+}
+
+model Inbox {
+  id        String    @id @default(uuid()) @db.Uuid
+  airdropId String    @unique @db.Uuid
+  Airdrop   Airdrop   @relation(fields: [airdropId], references: [id], onDelete: Cascade)
+  message   Message[]
+}
+
+model ArticleAdmin {
+  id             String        @id @unique
+  name           String?
+  email          String
+  image          String?
+  bio            String?
+  slug           String?
+  articleId      String?
+  humansofWeb3Id String?
+  blogId         String?
+  Article        Article?      @relation(fields: [articleId], references: [id])
+  Blog           Blog?         @relation(fields: [blogId], references: [id])
+  HumansofWeb3   HumansofWeb3? @relation(fields: [humansofWeb3Id], references: [id])
+}
+
+model ArticleCategory {
+  id          String   @id @unique
+  title       String
+  description String?
+  articleId   String?
+  Article     Article? @relation(fields: [articleId], references: [id])
+}
+
+model Coin {
+  id          String  @id @unique @default(uuid())
+  name        String
+  symbol      String?
+  description String?
+  articleId   String
+  Article     Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+}
+
+model Tokens {
+  id        String   @id @unique
+  title     String
+  articleId String?
+  Article   Article? @relation(fields: [articleId], references: [id])
+}
+
+model Article {
+  id              String            @id @unique
+  title           String
+  slug            String?
+  isPublishStatus Boolean           @default(false)
+  source          String
+  originalContent String
+  summary         String?
+  image           String?
+  publishedAt     DateTime          @default(now())
+  portfolio       Json?
+  detail          String?
+  ourTake         String?
+  sentiment       Sentiment?
+  articleLiked    BigInt?           @default(0)
+  articleDisliked BigInt?           @default(0)
+  userId          String?
+  recapId         String?
+  keyTerms        Json?
+  articleRating   Float?
+  readingTime     Int?              @default(0)
+  shareImage      String?
+  trending        Boolean?          @default(false)
+  trendingTill    BigInt?
+  Recap           Recap?            @relation(fields: [recapId], references: [id])
+  User            User?             @relation(fields: [userId], references: [id])
+  author          ArticleAdmin[]
+  categories      ArticleCategory[]
+  coins           Coin[]
+  ratings         Rating[]
+  tokens          Tokens[]
+  userBookmarked  UserBookmarked[]
+  userDisiked     UserDisiked[]
+  userLiked       UserLiked[]
+}
+
+model Rating {
+  id        String   @id @unique @default(uuid())
+  rating    Int
+  createdAt DateTime @default(now())
+  articleId String
+  userId    String
+  article   Article  @relation(fields: [articleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+}
+
+model RatingLMS {
+  id        String   @id @unique @default(uuid())
+  rating    Int
+  createdAt DateTime @default(now())
+  chapterId String
+  userId    String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, userId], name: "RatingLMS_user_article")
+}
+
+model UserLiked {
+  id        String  @id @default(uuid())
+  userId    String
+  articleId String
+  Article   Article @relation(fields: [articleId], references: [id])
+
+  @@unique([userId, articleId], name: "userId_articleId")
+}
+
+model UserDisiked {
+  id        String  @id @default(uuid())
+  userId    String
+  articleId String
+  Article   Article @relation(fields: [articleId], references: [id])
+
+  @@unique([userId, articleId], name: "userId_articleId")
+}
+
+model UserBookmarked {
+  id        String  @id @default(uuid())
+  userId    String
+  articleId String
+  Article   Article @relation(fields: [articleId], references: [id])
+
+  @@unique([userId, articleId], name: "userId_articleId")
+}
+
+model HumansofWeb3 {
+  id                String         @id @unique
+  title             String
+  slug              String?
+  introduction      String?
+  guestIntroduction String?
+  isPublishStatus   Boolean        @default(false)
+  image             String?
+  altText           String?
+  keyInsights       String[]
+  aboutTheJourney   String?
+  hotTake           String?
+  recommendations   String[]
+  micDrop           String?
+  vision            String?
+  hero              String?
+  publishedAt       DateTime       @default(now())
+  ArticleAdmin      ArticleAdmin[]
+}
+
+model Blog {
+  id              String         @id @unique
+  title           String
+  slug            String?
+  isPublishStatus Boolean        @default(false)
+  tagLine         String?
+  image           String?
+  altText         String?
+  section1        String?
+  section2        String?
+  section3        String?
+  section4        String?
+  section5        String?
+  publishedAt     DateTime       @default(now())
+  ArticleAdmin    ArticleAdmin[]
+}
+
+model Recap {
+  id              String    @id @unique
+  title           String
+  fromDate        String?
+  toDate          String?
+  image           String?
+  isPublishStatus Boolean   @default(false)
+  content         String?
+  articles        Article[]
+}
+
+enum SocialPlatform {
+  Instagram
+  Twitter
+  Facebook
+  LinkedIn
+  Discord
+  Telegram
+}
+
+enum QuestionType {
+  quiz
+  social
+  poll
+  text
+  fileUploadTask
+  rating
+  number
+  transaction
+  url
+}
+
+enum NotificationTypes {
+  WhatsApp
+  Telegram
+  Email
+  SMS
+}
+
+enum Sentiment {
+  Neutral
+  Bullish
+  Bearish
+}
